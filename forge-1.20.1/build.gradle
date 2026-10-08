@@ -1,0 +1,75 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev.legacyforge' version '2.0.148'
+    id 'idea'
+}
+
+// File name carries the Minecraft version; mods.toml keeps mod_version.
+version = "${mod_version}+mc${minecraft_version}"
+group = mod_group_id
+base { archivesName = "create_clipboard_glance" }
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+repositories {
+    maven { url = 'https://maven.createmod.net' } // Create, Ponder, Flywheel
+    maven { url = 'https://maven.ithundxr.dev/mirror' } // Registrate
+    mavenCentral() // MixinExtras
+}
+
+legacyForge {
+    version = "${minecraft_version}-${forge_version}"
+    mods {
+        "${mod_id}" { sourceSet(sourceSets.main) }
+    }
+    runs {
+        client {
+            client()
+            gameDirectory = project.file('run/client')
+        }
+        server {
+            server()
+            gameDirectory = project.file('run/server')
+            programArgument '--nogui'
+        }
+        configureEach { logLevel = org.slf4j.event.Level.INFO }
+    }
+}
+
+// Legacy Forge has no FML unit-test runtime: tests are plain JUnit with Minecraft classes on the classpath and
+// cover only logic that needs no game bootstrap.
+legacyForge.addModdingDependenciesTo(sourceSets.test)
+
+// Mod configurations remap SRG-named mod JARs to official names and are not transitive,
+// so Create's runtime mod dependencies are listed explicitly (versions from Create mc1.20.1-6.0.8).
+dependencies {
+    modImplementation("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false }
+    modImplementation("net.createmod.ponder:Ponder-Forge-${minecraft_version}:${ponder_version}")
+    modCompileOnly("dev.engine-room.flywheel:flywheel-forge-api-${minecraft_version}:${flywheel_version}")
+    modRuntimeOnly("dev.engine-room.flywheel:flywheel-forge-${minecraft_version}:${flywheel_version}")
+    modImplementation("com.tterrag.registrate:Registrate:${registrate_version}")
+    runtimeOnly("io.github.llamalad7:mixinextras-forge:${mixin_extras_version}")
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+def generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    def values = [mod_id: mod_id, mod_name: mod_name, mod_version: mod_version, mod_license: mod_license]
+    inputs.properties values
+    expand values
+    from 'src/main/templates'
+    into layout.buildDirectory.dir('generated/modMetadata')
+}
+sourceSets.main.resources.srcDir generateModMetadata
+legacyForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+tasks.named('test') {
+    useJUnitPlatform()
+    defaultCharacterEncoding = 'UTF-8'
+    // Forge's log4j2 config on the test classpath writes logs/ into the working directory; keep it under build/.
+    def testDir = layout.buildDirectory.dir('test-run').get().asFile
+    workingDir = testDir
+    doFirst { testDir.mkdirs() }
+}
+tasks.named('jar') { from('TEMPLATE_LICENSE.txt', '../LICENSE') }
+idea { module { downloadSources = true } }

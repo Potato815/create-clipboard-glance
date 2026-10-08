@@ -1,0 +1,67 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+    id 'idea'
+}
+
+// File name carries the Minecraft version; mods.toml keeps mod_version.
+version = "${mod_version}+mc${minecraft_version}"
+group = mod_group_id
+base { archivesName = "create_clipboard_glance" }
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    maven { url = 'https://maven.createmod.net' }
+    maven { url = 'https://maven.ithundxr.dev/snapshots' }
+}
+
+neoForge {
+    version = project.neo_version
+    mods {
+        "${mod_id}" { sourceSet(sourceSets.main) }
+    }
+    unitTest {
+        enable()
+        testedMod = mods[mod_id]
+    }
+    runs {
+        client {
+            client()
+            gameDirectory = project.file('run/client')
+        }
+        server {
+            server()
+            gameDirectory = project.file('run/server')
+            programArgument '--nogui'
+        }
+        configureEach { logLevel = org.slf4j.event.Level.INFO }
+    }
+}
+
+dependencies {
+    implementation("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false }
+    implementation("net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}")
+    compileOnly("dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:${flywheel_version}")
+    runtimeOnly("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}")
+    implementation("com.tterrag.registrate:Registrate:${registrate_version}")
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+def generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    def values = [mod_id: mod_id, mod_name: mod_name, mod_version: mod_version, mod_license: mod_license]
+    inputs.properties values
+    expand values
+    from 'src/main/templates'
+    into layout.buildDirectory.dir('generated/modMetadata')
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+tasks.named('test') {
+    useJUnitPlatform()
+    defaultCharacterEncoding = 'UTF-8'
+}
+tasks.named('jar') { from('TEMPLATE_LICENSE.txt', '../LICENSE') }
+idea { module { downloadSources = true } }

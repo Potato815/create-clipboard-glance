@@ -1,0 +1,33 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+description='''Read placed Create clipboards at a glance, without opening them.'''
+logoFile="create_clipboard_glance_logo.png"
+credits='Icon background: "New Create Logo Background" by Bl4zerBo1XXXX from the Create Wiki on Fandom (create.fandom.com), based on the Create logo, licensed under CC BY-SA. The icon is shared under the same license.'
+
+[[dependencies.${mod_id}]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.219,21.2)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1]"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.${mod_id}]]
+modId="create"
+type="required"
+# Maven's matching development artifact includes a build suffix.
+versionRange="[6.0.10,6.0.11)"
+ordering="AFTER"
+side="CLIENT"
